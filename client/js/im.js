@@ -343,7 +343,7 @@ $.extend(AjaxIM.prototype, {
         
         // Set username in Friends list
         var header = $('#imjs-friends-panel .imjs-header');
-        header.html(header.html().replace('{username}', this.username));
+        header.find('span').html(this.username);
     },
 
     // === //private// {{{AjaxIM.}}}**{{{_clearSession()}}}** ===
