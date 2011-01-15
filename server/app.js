@@ -57,9 +57,8 @@ var app = express.createServer(
     express.cookieDecoder(),
     express.bodyDecoder(),
     require('./middleware/im')({
-        maxAge: 15 * 60 * 1000,
-        reapInterval: 60 * 1000,
-        authentication: require('./libs/authentication/' + AUTH_LIBRARY)
+        authentication: require('./libs/authentication/' + AUTH_LIBRARY),
+        sessions: require('./libs/session/' + SESSION_STORE)
     })
 );
 

@@ -4,7 +4,7 @@ var events = require('events'),
 
 var User = module.exports = function(id, data) {
     this.id = id;
-    this.connection = null;
+    this._connection = null;
     this.listeners = [];
     this.message_queue = [];
     this.convos = {};
@@ -107,8 +107,16 @@ User.prototype.touch = function() {
 User.prototype.status = function(value, message) {
     if(!value)
         return this._status;
-    
+
     this._status = value;
     this._status_message = message;
     this.events.emit('status', value, message);
 };
+
+User.prototype.setConnection = function(conn) {
+    this._connection = conn;
+}
+
+User.prototype.getConnection = function() {
+    return this._connection;
+}

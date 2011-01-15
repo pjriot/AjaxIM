@@ -38,12 +38,12 @@ module.exports = function setupHub(options) {
                 if(url.parse(req.url).pathname === '/listen') {
                     req.connection.setTimeout(5 * 60 * 1000);
                     sess.listener(res);
-                    store.set(req.sessionID, sess);
+                    store.getStore().set(req.sessionID, sess);
 
                     if(msg = sess.message_queue.shift())
                         sess._send.apply(sess, msg);
                 } else {
-                    sess.connection = res;
+                    sess.setConnection(res);
                 }
 
                 req.session = sess;

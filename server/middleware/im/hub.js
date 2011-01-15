@@ -7,71 +7,46 @@ var events = require('events'),
 var Hub = module.exports = function Hub(options) {
     this.events = new events.EventEmitter();
     this.auth = options.authentication;
-    this.sessions = {};
-
-    this.maxAge = options.maxAge || 4 * 60 * 60 * 1000;
-    this.reapInterval = options.reapInterval || 60 * 1000;
-
-    if(this.reapInterval !== -1) {
-        setInterval(function(self) {
-            self.reap(self.maxAge);
-        }, this.reapInterval, this);
-    }
 
     this.events.addListener('update', o_.bind(function(package) {
         var _package = package.toJSON();
         if(package.type == 'status' && package.status == 'offline') {
-            var sids = Object.keys(this.sessions), sid, sess;
-            for(sid in this.sessions) {
-                sess = this.sessions[sid];
-                if(sess.data('username') == package.username) {
-                    if(sess.listeners.length)
-                        sess.send(200, {type: 'goodbye'});
-                    delete this.sessions[sid];
-                    break;
-                }
-            }
+            this.sessions.destroy(package.username);
         }
     }, this));
-};
 
-Hub.prototype.destroy = function(sid, fn) {
-    this.set(sid, null, fn);
-};
-
-Hub.prototype.reap = function(ms) {
-    var threshold = +new Date - ms,
-        sids = Object.keys(this.sessions);
-    for(var i = 0, len = sids.length; i < len; ++i) {
-        var sid = sids[i], sess = this.sessions[sid];
-        if(sess.lastAccess < threshold) {
-            this.events.emit('update', new packages.Offline(sess.data('username')));
-        }
-    }
+    this.sessions = options.sessions.getInstance(this.events);
 };
 
 Hub.prototype.get = function(req, fn) {
-    if(this.sessions[req.sessionID]) {
-        fn(null, this.sessions[req.sessionID]);
+    // add reap callbacks for when the user leaves the page
+    req.connection.addListener('end', function() {
+                    console.log("end");
+                    req.sessionStore.sessions.reap("end", req.sessionID);
+              });
+
+    if(this.sessions.get("sid", [req.sessionID])) {
+        fn(null, this.sessions.get("sid", req.sessionID));
     } else {
         this.auth.authenticate(req, o_.bind(function(data) {
             if(data) {
                 var session = new User(req.sessionID, data);
-                this.set(req.sessionID, session);
+                this.sessions.set(req.sessionID, session);
 
                 this.auth.friends(req, data, o_.bind(function(friends) {
+                    // cycle through your friends list comparing it to active sessions
                     var friends_copy = friends.slice();
-                    o_.values(this.sessions).filter(function(friend) {
-                        return ~friends.indexOf(friend.data('username'));
-                    }).forEach(function(friend) {
-                        var username = friend.data('username');
-                        friends_copy[friends_copy.indexOf(username)] =
-                                            [username, friend.status()];
-                    }, this);
-
+                    for(i = 0; i < friends_copy.length; i++) {
+                        var username = friends_copy[i];
+                        friend_session = this.sessions.get("username", username);
+                        if(friend_session != undefined) {
+                            friends_copy[i] = [username, friend_session._status];
+                        }
+                    }
                     session._friends(friends_copy);
                     session.events.addListener('status',
                         o_.bind(function(value, message) {
+                            // console.log("hub.js: 64 -           session.events.status callback");
                             this.events.emit(
                                 'update',
                                 new packages.Status(session.data('username'),
@@ -81,7 +56,8 @@ Hub.prototype.get = function(req, fn) {
                         }, this));
                     this.events.addListener('update',
                                       o_.bind(session.receivedUpdate, session));
-                    this.set(req.sessionID, session);
+                    // session.status('available', '');
+                    this.sessions.set(req.sessionID, session);
                     fn(null, session);
                 }, this));
             } else {
@@ -91,19 +67,11 @@ Hub.prototype.get = function(req, fn) {
     }
 };
 
-Hub.prototype.set = function(sid, sess, fn) {
-    this.sessions[sid] = sess;
-    fn && fn();
-};
-
 Hub.prototype.find = function(username, fn) {
-    for(var sid in this.sessions) {
-        var session = this.sessions[sid],
-            sess_username = session.data('username');
-        if(sess_username == username) {
-            fn(session);
-            return;
-        }
+    session = this.sessions.get("username", username);
+    if(session) {
+        fn(session);
+        return;
     }
     fn(false);
 };
@@ -119,8 +87,13 @@ Hub.prototype.message = function(from, to, package) {
 };
 
 Hub.prototype.signOff = function(sid) {
-    if(sid in this.sessions)
+    if(this.sessions.get("sid", sid))
         this.events.emit('update',
                          new packages.Offline(
-                            this.sessions[sid].data('username')));
+                            this.sessions.get("sid", sid).data('username')));
 };
+
+Hub.prototype.getStore = function(sid) {
+    return this.sessions;
+};
+

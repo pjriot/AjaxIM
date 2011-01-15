@@ -8,14 +8,18 @@
 //
 // Define the host and port that Ajax IM will run on.
 APP_HOST = 'localhost';
-APP_PORT = 8000;
+APP_PORT = 8007;
 
 // === Authentication Library ===
 //
 // This is the library (from libs/authenticate/) that we will use to
 // authenticate a user signing in. The value should be the name of the file
 // without the '.js' part. 'index' is the default library.
-AUTH_LIBRARY = 'default';
+AUTH_LIBRARY = 'connect';
+
+// === Session Store ===
+//
+SESSION_STORE = 'default';
 
 // === Daemon ===
 //

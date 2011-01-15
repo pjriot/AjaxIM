@@ -952,7 +952,7 @@ $.extend(AjaxIM.prototype, {
     // the update to all individuals with "you" on their friends list.
     //
     // ==== Parameters ====
-    // * {{{s}}} is the status code, as defined by {{{AjaxIM.statuses}}}.
+    // * {{{value}}} is the status code, as defined by {{{AjaxIM.statuses}}}.
     // * {{{message}}} is the custom status message.
     status: function(value, message) {
         var self = this;
